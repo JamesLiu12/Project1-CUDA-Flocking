@@ -64,6 +64,8 @@ void checkCUDAError(const char *msg, int line = -1) {
 /*! Size of the starting area in simulation space. */
 #define scene_scale 100.0f
 
+#define GRID_WIDTH_EQUALS_RADIUS 0
+
 /***********************************************
 * Kernel state (pointers are device pointers) *
 ***********************************************/
@@ -177,7 +179,7 @@ void Boids::initSimulation(int N) {
   checkCUDAErrorWithLine("kernGenerateRandomPosArray failed!");
 
   // LOOK-2.1 computing grid params
-  gridCellWidth = 2.0f * std::max(std::max(rule1Distance, rule2Distance), rule3Distance);
+  gridCellWidth = (GRID_WIDTH_EQUALS_RADIUS ? 1.0f : 2.0f) * std::max(std::max(rule1Distance, rule2Distance), rule3Distance);
   int halfSideCount = (int)(scene_scale / gridCellWidth) + 1;
   gridSideCount = 2 * halfSideCount;
 
@@ -469,9 +471,8 @@ __global__ void kernUpdateVelNeighborSearchScattered(
   int particleId = particleArrayIndices[particleIndex];
   const auto& particlePos = pos[particleId];
 
-  glm::ivec3 gridIndex3D = (particlePos - gridMin - glm::vec3(cellWidth * 0.5f)) * inverseCellWidth;
-  gridIndex3D = glm::clamp(gridIndex3D, 0, gridResolution - 1);
-  int gridIndex = gridIndex3Dto1D(gridIndex3D.x, gridIndex3D.y, gridIndex3D.z, gridResolution);
+  glm::ivec3 gridIndex3D = glm::floor(
+    (particlePos - gridMin - glm::vec3(GRID_WIDTH_EQUALS_RADIUS ? 0.0f : cellWidth * 0.5f)) * inverseCellWidth);
 
   glm::vec3 rule1Vel(0.0f);
   glm::vec3 rule2Vel(0.0f);
@@ -487,9 +488,19 @@ __global__ void kernUpdateVelNeighborSearchScattered(
   constexpr float rule2DistanceSquared = rule2Distance * rule2Distance;
   constexpr float rule3DistanceSquared = rule3Distance * rule3Distance;
 
-  for (int i = 0; i < 8; i++)
+  for (int i = 0; i < (GRID_WIDTH_EQUALS_RADIUS ? 27 : 8); i++)
   {
-    glm::ivec3 curGridIndex3D(gridIndex3D.x + (i & 1), gridIndex3D.y + (i >> 1 & 1), gridIndex3D.z + (i >> 2 & 1));
+#if GRID_WIDTH_EQUALS_RADIUS
+    glm::ivec3 curGridIndex3D = gridIndex3D + glm::ivec3(i % 3 - 1, i / 3 % 3 - 1, i / 9 - 1);
+#else
+    glm::ivec3 curGridIndex3D = gridIndex3D + glm::ivec3(i & 1, i >> 1 & 1, i >> 2 & 1);
+#endif
+    if (curGridIndex3D.x < 0 || curGridIndex3D.x >= gridResolution ||
+      curGridIndex3D.y < 0 || curGridIndex3D.y >= gridResolution ||
+      curGridIndex3D.z < 0 || curGridIndex3D.z >= gridResolution) {
+      continue;
+    }
+    
     int curGridIndex = gridIndex3Dto1D(curGridIndex3D.x, curGridIndex3D.y, curGridIndex3D.z, gridResolution);
 
     for (int j = gridCellStartIndices[curGridIndex]; j < gridCellEndIndices[curGridIndex]; j++)
@@ -571,9 +582,8 @@ __global__ void kernUpdateVelNeighborSearchCoherent(
 
   const auto& particlePos = pos[particleIndex];
 
-  glm::ivec3 gridIndex3D = (particlePos - gridMin - glm::vec3(cellWidth * 0.5f)) * inverseCellWidth;
-  gridIndex3D = glm::clamp(gridIndex3D, 0, gridResolution - 1);
-  int gridIndex = gridIndex3Dto1D(gridIndex3D.x, gridIndex3D.y, gridIndex3D.z, gridResolution);
+	glm::ivec3 gridIndex3D = glm::floor(
+		(particlePos - gridMin - glm::vec3(GRID_WIDTH_EQUALS_RADIUS ? 0.0f : cellWidth * 0.5f)) * inverseCellWidth);
 
   glm::vec3 rule1Vel(0.0f);
   glm::vec3 rule2Vel(0.0f);
@@ -589,9 +599,19 @@ __global__ void kernUpdateVelNeighborSearchCoherent(
   constexpr float rule2DistanceSquared = rule2Distance * rule2Distance;
   constexpr float rule3DistanceSquared = rule3Distance * rule3Distance;
 
-  for (int i = 0; i < 8; i++)
+  for (int i = 0; i < (GRID_WIDTH_EQUALS_RADIUS ? 27 : 8); i++)
   {
-    glm::ivec3 curGridIndex3D(gridIndex3D.x + (i & 1), gridIndex3D.y + (i >> 1 & 1), gridIndex3D.z + (i >> 2 & 1));
+#if GRID_WIDTH_EQUALS_RADIUS
+		glm::ivec3 curGridIndex3D = gridIndex3D + glm::ivec3(i % 3 - 1, i / 3 % 3 - 1, i / 9 - 1);
+#else
+		glm::ivec3 curGridIndex3D = gridIndex3D + glm::ivec3(i & 1, i >> 1 & 1, i >> 2 & 1);
+#endif
+		if (curGridIndex3D.x < 0 || curGridIndex3D.x >= gridResolution ||
+			curGridIndex3D.y < 0 || curGridIndex3D.y >= gridResolution ||
+			curGridIndex3D.z < 0 || curGridIndex3D.z >= gridResolution) {
+			continue;
+		}
+
     int curGridIndex = gridIndex3Dto1D(curGridIndex3D.x, curGridIndex3D.y, curGridIndex3D.z, gridResolution);
 
     for (int j = gridCellStartIndices[curGridIndex]; j < gridCellEndIndices[curGridIndex]; j++)
