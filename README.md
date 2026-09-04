@@ -62,7 +62,7 @@ My guess is that boids at 50k gather into cells in a way that leads to more neig
 
 ### 2. Effect of Block Size and Block Count
 
-![FPS versus block size for all three implementations, with visualization disabled and enabled](images/performance/block_size.png)
+![FPS versus block size for all three implementations, with visualization disabled and enabled](images/performance/block_size.svg)
 
 *50,000 boids; cell width equals twice the search radius. Block count changes with block size as `ceil(N / blockSize)`.*
 
