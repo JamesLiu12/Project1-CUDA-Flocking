@@ -229,9 +229,9 @@ void initShaders(GLuint * program) {
     Boids::unitTest(); // LOOK-1.2 We run some basic example code to make sure
                        // your CUDA development setup is ready to go.
 
-		int totalFrames = 0;
-		const double startTime = glfwGetTime();
-		timebase = startTime;
+    int totalFrames = 0;
+    const double startTime = glfwGetTime();
+    timebase = startTime;
 
     while (!glfwWindowShouldClose(window)) {
       glfwPollEvents();
@@ -272,17 +272,17 @@ void initShaders(GLuint * program) {
       totalFrames++;
     }
 
-		cudaDeviceSynchronize();
+    cudaDeviceSynchronize();
 
-		const double totalSeconds = glfwGetTime() - startTime;
+    const double totalSeconds = glfwGetTime() - startTime;
 
-		if (totalFrames > 0 && totalSeconds > 0.0) {
-			std::cout
-				<< "Total frames: " << totalFrames
-				<< ", elapsed: " << totalSeconds << " s"
-				<< ", average FPS: " << totalFrames / totalSeconds
-				<< std::endl;
-		}
+    if (totalFrames > 0 && totalSeconds > 0.0) {
+      std::cout
+        << "Total frames: " << totalFrames
+        << ", elapsed: " << totalSeconds << " s"
+        << ", average FPS: " << totalFrames / totalSeconds
+        << std::endl;
+    }
 
     glfwDestroyWindow(window);
     glfwTerminate();
@@ -318,8 +318,8 @@ void initShaders(GLuint * program) {
       updateCamera();
     }
 
-	lastX = xpos;
-	lastY = ypos;
+  lastX = xpos;
+  lastY = ypos;
   }
 
   void updateCamera() {
